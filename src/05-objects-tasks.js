@@ -117,32 +117,62 @@ function fromJSON(proto, json) {
  */
 
 const cssSelectorBuilder = {
-  element(/* value */) {
-    throw new Error('Not implemented');
+  element(value) {
+    if (this.lpseudoElement || this.lpseudoClass || this.lattr || this.lclass || this.lid) throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    if (this.lelement) throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    return { lelement: value, ...this };
   },
 
-  id(/* value */) {
-    throw new Error('Not implemented');
+  id(value) {
+    if (this.lpseudoElement || this.lpseudoClass || this.lattr || this.lclass) throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    if (this.lid) throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    return { lid: value, ...this };
   },
 
-  class(/* value */) {
-    throw new Error('Not implemented');
+  class(value) {
+    if (this.lpseudoElement || this.lpseudoClass || this.lattr) throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    const res = { ...this };
+    if (res.lclass) {
+      res.lclass.push(value);
+    } else res.lclass = [value];
+    return res;
   },
 
-  attr(/* value */) {
-    throw new Error('Not implemented');
+  attr(value) {
+    if (this.lpseudoClass || this.lpseudoElement) throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    return { lattr: value, ...this };
   },
 
-  pseudoClass(/* value */) {
-    throw new Error('Not implemented');
+  pseudoClass(value) {
+    if (this.lpseudoElement) throw new Error('Selector parts should be arranged in the following order: element, id, class, attribute, pseudo-class, pseudo-element');
+    const res = { ...this };
+    if (res.lpseudoClass) {
+      res.lpseudoClass.push(value);
+    } else res.lpseudoClass = [value];
+    return res;
   },
 
-  pseudoElement(/* value */) {
-    throw new Error('Not implemented');
+  pseudoElement(value) {
+    if (this.lpseudoElement) throw new Error('Element, id and pseudo-element should not occur more then one time inside the selector');
+    return { lpseudoElement: value, ...this };
   },
 
-  combine(/* selector1, combinator, selector2 */) {
-    throw new Error('Not implemented');
+  combine(selector1, combinator, selector2) {
+    return { values: [selector1, combinator, selector2], ...this };
+  },
+  stringify() {
+    let res = '';
+    if (this.values) {
+      res += [...this.values].map((el) => ((typeof el === 'string') ? el : el.stringify())).join(' ');
+    } else {
+      if (this.lelement) res += this.lelement;
+      if (this.lid) res += `#${this.lid}`;
+      if (this.lclass) res += `${this.lclass.reduce((prev, cur) => prev.concat(`.${cur}`), '')}`;
+      if (this.lattr) res += `[${this.lattr}]`;
+      if (this.lpseudoClass) res += `${this.lpseudoClass.reduce((prev, cur) => prev.concat(`:${cur}`), '')}`;
+      if (this.lpseudoElement) res += `::${this.lpseudoElement}`;
+    }
+    return res;
   },
 };
 
